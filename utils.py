@@ -36,15 +36,112 @@ from copy import deepcopy
 class AbstractImplementationException(Exception):
     pass
 
+from performance import performance_measures
 class Alpha():
 
     def __init__(self, insts, dfs, start, end, portfolio_vol=0.20):
         self.insts = insts
         self.dfs = deepcopy(dfs)
+        self.datacopy = deepcopy(dfs)
         self.start = start 
         self.end = end
         self.portfolio_vol = portfolio_vol
     
+    def get_zero_filtered_stats(self):
+        assert self.portfolio_df is not None
+        df = self.portfolio_df
+        capital_ret = self.portfolio_df.capital_ret
+        non_zero_idx = capital_ret.loc[capital_ret != 0].index
+        retdf = self.retdf.loc[non_zero_idx]
+        weights = self.weights_df.shift(1).fillna(0).loc[non_zero_idx]
+        eligs = self.eligiblesdf.shift(1).fillna(0).loc[non_zero_idx]
+        leverages = self.leverages.shift(1).fillna(0).loc[non_zero_idx]
+        return {
+            "capital_ret": capital_ret.loc[non_zero_idx],
+            "retdf":retdf,
+            "weights":weights,
+            "eligs":eligs,
+            "leverages":leverages,
+        }
+
+    def get_perf_stats(self,plot=False):
+        assert self.portfolio_df is not None
+        df = self.portfolio_df
+        return performance_measures(r=self.get_zero_filtered_stats()["capital_ret"],plot=plot)
+    
+    def get_hypothesis_tests(self,zfs=None,num_decision_shuffles=1000,num_data_shuffles=100):
+        import quant_stats
+        zfs = self.get_zero_filtered_stats() if not zfs else zfs
+        return_samples = zfs["capital_ret"]
+        p1=quant_stats.one_sample_signed_rank_test(sample=return_samples, m0=0.0, side="greater")
+        p2=quant_stats.one_sample_sign_test(sample=return_samples, m0=0.0, side="greater")
+        
+        def sharpe(retdf,leverages,weights,**kwargs):
+            capital_ret = [
+                lev * np.dot(weight,ret) for lev, weight, ret \
+                in zip(leverages, weights.values, retdf.values)
+            ]
+            sharpe = np.mean(capital_ret) / np.std(capital_ret) * np.sqrt(253)
+            return round(sharpe,3)
+        def time_shuffler(retdf,leverages,weights,eligs,**kwargs):
+            nweights = quant_stats.shuffle_weights_on_eligs(weights_df=weights, eligs_df=eligs, shuffle_type="time")
+            return {"retdf": retdf, "leverages": leverages, "weights": nweights, "eligs": eligs}
+        def picking_shuffler(retdf,leverages,weights,eligs,**kwargs):
+            nweights = quant_stats.shuffle_weights_on_eligs(weights_df=weights, eligs_df=eligs, shuffle_type="xs")
+            return {"retdf": retdf, "leverages": leverages, "weights": nweights, "eligs": eligs}
+        def skill_shuffler1(retdf,leverages,weights,eligs,**kwargs):
+            nweights = quant_stats.shuffle_weights_on_eligs(weights_df=weights, eligs_df=eligs, shuffle_type="time")
+            nweights = quant_stats.shuffle_weights_on_eligs(weights_df=nweights, eligs_df=eligs, shuffle_type="xs")
+            return {"retdf": retdf, "leverages": leverages, "weights": nweights, "eligs": eligs}
+        def skill_shuffler2(**kwargs):
+            machine_copy = deepcopy(self)
+            insts = machine_copy.insts
+            bars = [
+                machine_copy.datacopy[inst][["open","high","low","close","volume"]]
+                for inst in insts
+            ]
+            permuted_bars = quant_stats.permute_multi_bars(bars)
+            machine_copy.datacopy.update({inst:bar for inst,bar in zip(insts,permuted_bars)})
+            machine_copy.dfs=machine_copy.datacopy
+            machine_copy.run_simulation()
+            zfs=machine_copy.get_zero_filtered_stats()
+            return {
+                "retdf": zfs["retdf"], "leverages": zfs["leverages"], 
+                "weights": zfs["weights"], "eligs": zfs["eligs"]
+            }
+        
+        p3=quant_stats.permutation_shuffler_test(
+            criterion_function=sharpe,generator_function=time_shuffler,
+            m=num_decision_shuffles,retdf=zfs["retdf"],leverages=zfs["leverages"],
+            weights=zfs["weights"],eligs=zfs["eligs"]
+        )
+
+        p4=quant_stats.permutation_shuffler_test(
+            criterion_function=sharpe,generator_function=picking_shuffler,
+            m=num_decision_shuffles,retdf=zfs["retdf"],leverages=zfs["leverages"],
+            weights=zfs["weights"],eligs=zfs["eligs"]
+        )
+
+        p5=quant_stats.permutation_shuffler_test(
+            criterion_function=sharpe,generator_function=skill_shuffler1,
+            m=num_decision_shuffles,retdf=zfs["retdf"],leverages=zfs["leverages"],
+            weights=zfs["weights"],eligs=zfs["eligs"]
+        )
+
+        p6=quant_stats.permutation_shuffler_test(
+            criterion_function=sharpe,generator_function=skill_shuffler2,
+            m=num_data_shuffles,retdf=zfs["retdf"],leverages=zfs["leverages"],
+            weights=zfs["weights"],eligs=zfs["eligs"]
+        )
+        return {
+            "sign_rank": p1,
+            "sign_test": p2,
+            "asset_timing": p3,
+            "asset_picking": p4,
+            "skill_1": p5,
+            "skill_2": p6
+        }
+
     def pre_compute(self,trade_range):
         pass
 
@@ -167,7 +264,7 @@ class Alpha():
         nomret_ser = pd.Series(data=nominal_rets, index=date_range, name="nominal_ret")
         capret_ser = pd.Series(data=capital_rets, index=date_range, name="capital_ret")
         scaler__ser = pd.Series(data=strat_scalars, index=date_range, name="strat_scalar")
-        portfolio_df = pd.concat([
+        self.portfolio_df = pd.concat([
             units_df,
             weights_df,\
             lev_ser,
@@ -177,7 +274,9 @@ class Alpha():
             capret_ser,
             cap_ser
         ],axis=1)
-        return portfolio_df
+        self.weights_df = weights_df
+        self.leverages = lev_ser
+        return self.portfolio_df
 
     def zip_data_generator(self):
         for (portfolio_i),\
