@@ -55,8 +55,11 @@ def main():
     print(f'levered_returns.shape={levered_returns.shape}')
     initial_cash=100
     cash=initial_cash*(1+levered_returns).cumprod()
+    cash=np.concatenate(([initial_cash],cash.flatten())).reshape(-1,1)
     print(f'levered_returns={levered_returns}')
     print(f'cash={cash}')
+    units=cash*np_weights*leverage/np_prices
+    print(f'units={units}')
     #port_returns=(np_weights[:-1,:]*log_rets[1:,:])
 
 
