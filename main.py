@@ -71,7 +71,7 @@ def get_histories(tickers, period_starts,period_ends, granularity="1d"):
     def _helper(i):
         print(tickers[i])
         df = get_history(
-            tickers[i],
+tickers[i],
             period_starts[i], 
             period_ends[i], 
             granularity=granularity
@@ -114,7 +114,20 @@ def main():
     testfor = 10
     #print(f"testing {testfor} out of {len(tickers)} tickers")
     tickers = tickers[:testfor]
+    import weights_sim
 
+    #result=weights_sim.create_market_data(tickers,ticker_dfs)
+    result=weights_sim.pre_compute(tickers,ticker_dfs,period_start,period_end)
+    result=weights_sim.default_compute(result)
+    result=weights_sim.alpha1_compute(tickers,result)
+    forecasts=weights_sim.compute_signal_distribution(result)
+    weights=weights_sim.compute_weights(result,forecasts)
+
+
+    weights_sim.output_dict_as_xlsx(result,"market_data.xlsx")
+
+    
+    """
     alpha1 = Alpha1(insts=tickers,dfs=ticker_dfs,start=period_start,end=period_end)
     alpha2 = Alpha2(insts=tickers,dfs=ticker_dfs,start=period_start,end=period_end)
     alpha3 = Alpha3(insts=tickers,dfs=ticker_dfs,start=period_start,end=period_end)
@@ -150,6 +163,7 @@ def main():
     print(performance.PerformanceMeasure.compute_all_metrics(df1.capital_ret))
     print(performance.PerformanceMeasure.compute_all_metrics(df2.capital_ret))
     print(performance.PerformanceMeasure.compute_all_metrics(df3.capital_ret))
+    """
 
 if __name__ == "__main__":
     main()
