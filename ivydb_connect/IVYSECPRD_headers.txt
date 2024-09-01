@@ -1,0 +1,1 @@
+"Security ID","Date","Bid/Low","Ask/High","Close Price","Volume","Total Return","Adjustment Factor","Open Price","Shares Outstanding","Adjustment Factor2"
