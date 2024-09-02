@@ -160,13 +160,20 @@ if __name__ == "__main__":
 
         # Reset the index if you want 'Security ID' and 'Date' as columns
         joined_df = joined_df.reset_index()
+        testfor=50000
+        joined_df=joined_df.iloc[:testfor]
 
         joined_df['Percent_ATM'] = (joined_df['Strike'] / 1000) / joined_df['Close Price']
+        #print(joined_df.head())
+        joined_df=joined_df.pivot_table(index=['Security ID', 'Date','Close Price', 'Adjustment Factor2', 'Expiration','Percent_ATM','Strike','Special Settlement'], columns='Call/Put').reset_index()
         joined_df = joined_df.groupby(['Security ID', 'Date','Expiration']).apply(rank_strikes).reset_index(drop=True)
+        #input(joined_df['Delta']['C'])
+        joined_df["Delta Weighted IVol"]=(1-joined_df['Delta']['C'])*joined_df['Implied Volatility']['C']+joined_df['Delta']['C']*joined_df['Implied Volatility']['P']
         
         print(f'Joined DataFrame shape: {joined_df.shape}')
         print(joined_df.head())
         joined_df.to_csv('joined_df.csv', index=False)
+        print(f'joined_df.columns: {joined_df.columns}')
     except FileNotFoundError as e:
         print(f"Error: {e}")
     except Exception as e:
