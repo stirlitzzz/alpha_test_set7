@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 from ivydb_utils import IvyDBUtils
 from pathlib import Path
+from numba import jit
 
 import tqdm
 
@@ -133,6 +134,19 @@ def rank_strikes(group):
     
     return pd.concat([above_atm, below_atm])
 
+@jit(nopython=True)
+def linear_regression(x, y):
+    n = len(x)
+    sum_x = np.sum(x)
+    sum_y = np.sum(y)
+    sum_xy = np.sum(x * y)
+    sum_xx = np.sum(x * x)
+    
+    slope = (n * sum_xy - sum_x * sum_y) / (n * sum_xx - sum_x * sum_x)
+    intercept = (sum_y - slope * sum_x) / n
+    
+    return slope
+
 if __name__ == "__main__":
     reader = IvyDBGoogleDriveReader(
         credentials_file='testproject1-419520-61c1efd44a96.json',
@@ -161,14 +175,112 @@ if __name__ == "__main__":
         # Reset the index if you want 'Security ID' and 'Date' as columns
         joined_df = joined_df.reset_index()
         testfor=50000
-        joined_df=joined_df.iloc[:testfor]
+        #joined_df=joined_df.iloc[:testfor]
 
         joined_df['Percent_ATM'] = (joined_df['Strike'] / 1000) / joined_df['Close Price']
         #print(joined_df.head())
         joined_df=joined_df.pivot_table(index=['Security ID', 'Date','Close Price', 'Adjustment Factor2', 'Expiration','Percent_ATM','Strike','Special Settlement'], columns='Call/Put').reset_index()
-        joined_df = joined_df.groupby(['Security ID', 'Date','Expiration']).apply(rank_strikes).reset_index(drop=True)
-        #input(joined_df['Delta']['C'])
+
+
+
+        @jit(nopython=True)
+        def surf_params_numba(percent_atm, security_id, date, expiration,texp,iv,rank):
+            n = len(percent_atm)
+            slopes = np.zeros(n, dtype=np.float64)
+            atm_iv = np.zeros(n, dtype=np.float64)
+
+            # Create a unique identifier for each group
+            group_ids = security_id * 1000000000000 + date * 1000000 + expiration
+            unique_groups = np.unique(group_ids)
+            
+            for group in unique_groups:
+                mask = group_ids == group
+                mask=mask&(~np.isnan(iv))
+                group_percent_atm = percent_atm[mask]
+                group_ranks=rank[mask]
+                group_iv=iv[mask]
+                group_texp=texp[mask]
+                log_strike=np.log(group_percent_atm)
+                atm_vol=np.nan
+                if(~np.isnan(group_iv).all()):
+                    min_rank=np.min(np.abs(group_ranks))
+                    atm_vol=group_iv[np.abs(group_ranks)==min_rank][0]
+                    atm_strike=log_strike[np.abs(group_ranks)==min_rank][0]
+                    log_strike=log_strike-atm_strike
+                if(~np.isnan(atm_vol)):
+                    if(len(group_iv)>1):
+
+                        slopes[mask] = linear_regression(log_strike, group_iv-atm_vol)
+                        slopes[mask]=slopes[mask]*np.sqrt(group_texp)/10
+
+                        atm_iv[mask]=atm_vol
+            
+            return slopes,atm_iv
+
+        @jit(nopython=True)
+        def rank_strikes_numba(percent_atm, security_id, date, expiration):
+            n = len(percent_atm)
+            ranks = np.zeros(n, dtype=np.int64)
+            
+            # Create a unique identifier for each group
+            group_ids = security_id * 1000000000000 + date * 1000000 + expiration
+            unique_groups = np.unique(group_ids)
+            
+            for group in unique_groups:
+                mask = group_ids == group
+                group_percent_atm = percent_atm[mask]
+                group_ranks = np.zeros(len(group_percent_atm), dtype=np.int64)
+                
+                above = group_percent_atm >= 1.0
+                below = ~above
+                
+                group_ranks[above] = np.argsort(np.abs(group_percent_atm[above] - 1.0)) #+ 1
+                group_ranks[below] = -(np.argsort(np.abs(group_percent_atm[below] - 1.0))[::-1] + 1)
+                
+                ranks[mask] = group_ranks
+            
+            return ranks
+
+
+        def apply_rank_strikes_numba(df):
+            # Convert date columns to integers (days since epoch)
+            date_int = df['Date'].astype(int) // 10**9
+            expiration_int = df['Expiration'].astype(int) // 10**9
+            #texp=(df['Expiraton']-df['Date']).dt.days/365.25
+            #print(f'texp: {texp}')
+            expiration_dt=df['Expiration']
+            date_dt=df['Date']
+            texp=(expiration_dt-date_dt).dt.days/365.25
+            
+            # Apply the Numba function
+            df['Rank'] = rank_strikes_numba(
+                df['Percent_ATM'].astype(float).to_numpy(),
+                df['Security ID'].astype(int).to_numpy(),
+                date_int.to_numpy(),
+                expiration_int.to_numpy()
+            )
+            print(f'date_int: {date_int}')
+            print(f'expiration_int: {expiration_int}')
+            print(f'expiration_int-date_int: {(expiration_int.to_numpy()-date_int.to_numpy())/365.25}')
+            atm_iv,slopes = surf_params_numba(
+                df['Percent_ATM'].astype(float).to_numpy(),
+                df['Security ID'].astype(int).to_numpy(),
+                date_int.to_numpy(),
+                expiration_int.to_numpy(),
+                texp.to_numpy(),
+                df['Delta Weighted IVol'].astype(float).to_numpy(),
+                df['Rank'].astype(int).to_numpy()
+            )
+            df['ATM IV'] = atm_iv
+            df['Slope'] = slopes
+            return df
+
+        # Use the function
         joined_df["Delta Weighted IVol"]=(1-joined_df['Delta']['C'])*joined_df['Implied Volatility']['C']+joined_df['Delta']['C']*joined_df['Implied Volatility']['P']
+        joined_df = apply_rank_strikes_numba(joined_df)
+        #joined_df = joined_df.groupby(['Security ID', 'Date','Expiration']).apply(rank_strikes).reset_index(drop=True)
+        #joined_df = apply_rank_strikes_numba(joined_df)
+        #input(joined_df['Delta']['C'])
         
         print(f'Joined DataFrame shape: {joined_df.shape}')
         print(joined_df.head())
