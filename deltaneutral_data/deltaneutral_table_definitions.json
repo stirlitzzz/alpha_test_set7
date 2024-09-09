@@ -1,0 +1,349 @@
+{
+  "Security": [
+    {
+      "name": "Security ID",
+      "type": "integer",
+      "description": "Unique identifier for this security"
+    },
+    {
+      "name": "CUSIP",
+      "type": "char(8)",
+      "description": "First 8 digits of the security's current CUSIP number"
+    },
+    {
+      "name": "Ticker",
+      "type": "char(6)",
+      "description": "Security's current ticker symbol"
+    },
+    { "name": "SIC", "type": "char(4)", "description": "Security's SIC code" },
+    {
+      "name": "Index Flag",
+      "type": "char(1)",
+      "description": "1 if security is an index, 0 otherwise"
+    },
+    {
+      "name": "Exchange Flags",
+      "type": "integer",
+      "description": "Sum of flags indicating exchanges where security is listed"
+    },
+    {
+      "name": "Class",
+      "type": "char(1)",
+      "description": "Class designator of the security"
+    },
+    {
+      "name": "Issue Type",
+      "type": "char(1)",
+      "description": "Type of security"
+    },
+    {
+      "name": "Industry Group",
+      "type": "char(3)",
+      "description": "3-digit industry classification code"
+    }
+  ],
+  "Security_Price": [
+    {
+      "name": "Security ID",
+      "type": "integer",
+      "description": "Security ID for the security"
+    },
+    {
+      "name": "Date",
+      "type": "date",
+      "description": "Date for this price record"
+    },
+    {
+      "name": "Bid/Low",
+      "type": "real",
+      "description": "Low price or closing bid price"
+    },
+    {
+      "name": "Ask/High",
+      "type": "real",
+      "description": "High price or closing ask price"
+    },
+    {
+      "name": "Close Price",
+      "type": "real",
+      "description": "Closing price or average of closing bid and ask prices"
+    },
+    {
+      "name": "Volume",
+      "type": "bigint",
+      "description": "Sum of volumes on all exchanges"
+    },
+    {
+      "name": "Total Return",
+      "type": "real",
+      "description": "Holding period return for this security"
+    },
+    {
+      "name": "Adjustment Factor",
+      "type": "real",
+      "description": "Cumulative product of all adjustment factors"
+    },
+    {
+      "name": "Open Price",
+      "type": "real",
+      "description": "Opening price for this security"
+    },
+    {
+      "name": "Shares Outstanding",
+      "type": "integer",
+      "description": "Total number of publicly traded shares"
+    },
+    {
+      "name": "Adjustment Factor2",
+      "type": "real",
+      "description": "Cumulative Total Return Factor"
+    }
+  ],
+  "Option_Price": [
+    {
+      "name": "UnderlyingSymbol",
+      "type": "string",
+      "description": "ID of underlying security"
+    },
+    {
+      "name": "InderlyingPrice",
+      "type": "real",
+      "description": "Date of price"
+    },
+    { "name": "Exchange", "type": "char(1)", "description": "Option symbol" },
+    {
+      "name": "OptionSymbol",
+      "type": "string",
+      "description": "0 for old notation, 1 for new OSI symbol"
+    },
+    { "name": "Type", "type": "string", "description": "Strike price * 1000" },
+    { "name": "Expiration", "type": "date", "description": "Expiration date" },
+    {
+      "name": "DateDate",
+      "type": "date",
+      "description": "C for call, P for put"
+    },
+    {
+      "name": "Strike",
+      "type": "real",
+      "description": "Best bid price across exchanges"
+    },
+    {
+      "name": "Last",
+      "type": "real",
+      "description": "Best ask price across exchanges"
+    },
+    { "name": "Bid", "type": "real", "description": "Date of last trade" },
+    { "name": "Ask", "type": "real", "description": "Total contract volume" },
+    {
+      "name": "Volume",
+      "type": "integer",
+      "description": "Number of contracts outstanding"
+    },
+    {
+      "name": "Open Interest",
+      "type": "integer",
+      "description": "Flag for non-standard settlement"
+    },
+    {
+      "name": "Open Interest2",
+      "type": "integer",
+      "description": "Flag for non-standard settlement"
+    },
+    {
+      "name": "IV",
+      "type": "real",
+      "description": "Calculated implied volatility"
+    },
+    {
+      "name": "IV Bid",
+      "type": "real",
+      "description": "Calculated implied volatility"
+    },
+    {
+      "name": "IV Ask",
+      "type": "real",
+      "description": "Calculated implied volatility"
+    },
+    { "name": "Delta", "type": "real", "description": "Option Delta" },
+    { "name": "Gamma", "type": "real", "description": "Option Gamma" },
+    { "name": "Theta", "type": "real", "description": "Option Vega" },
+    { "name": "Vega", "type": "real", "description": "Option Theta" },
+    {
+      "name": "Alias",
+      "type": "string",
+      "description": "Unique ID for option contract"
+    }
+  ],
+  "Option_Stats": [
+    {
+      "name": "symbol",
+      "type": "string",
+      "description": "Stock symbol"
+    },
+    {
+      "name": "quotedate",
+      "type": "date",
+      "format": "M/D/YYYY",
+      "description": "Date of the quote"
+    },
+    {
+      "name": "iv30call",
+      "type": "float",
+      "description": "30-day implied volatility for calls"
+    },
+    {
+      "name": "iv30put",
+      "type": "float",
+      "description": "30-day implied volatility for puts"
+    },
+    {
+      "name": "iv30mean",
+      "type": "float",
+      "description": "30-day mean implied volatility"
+    },
+    {
+      "name": "iv60call",
+      "type": "float",
+      "description": "60-day implied volatility for calls"
+    },
+    {
+      "name": "iv60put",
+      "type": "float",
+      "description": "60-day implied volatility for puts"
+    },
+    {
+      "name": "iv60mean",
+      "type": "float",
+      "description": "60-day mean implied volatility"
+    },
+    {
+      "name": "iv90call",
+      "type": "float",
+      "description": "90-day implied volatility for calls"
+    },
+    {
+      "name": "iv90put",
+      "type": "float",
+      "description": "90-day implied volatility for puts"
+    },
+    {
+      "name": "iv90mean",
+      "type": "float",
+      "description": "90-day mean implied volatility"
+    },
+    {
+      "name": "iv120call",
+      "type": "float",
+      "description": "120-day implied volatility for calls"
+    },
+    {
+      "name": "iv120put",
+      "type": "float",
+      "description": "120-day implied volatility for puts"
+    },
+    {
+      "name": "iv120mean",
+      "type": "float",
+      "description": "120-day mean implied volatility"
+    },
+    {
+      "name": "iv150call",
+      "type": "float",
+      "description": "150-day implied volatility for calls"
+    },
+    {
+      "name": "iv150put",
+      "type": "float",
+      "description": "150-day implied volatility for puts"
+    },
+    {
+      "name": "iv150mean",
+      "type": "float",
+      "description": "150-day mean implied volatility"
+    },
+    {
+      "name": "iv180call",
+      "type": "float",
+      "description": "180-day implied volatility for calls"
+    },
+    {
+      "name": "iv180put",
+      "type": "float",
+      "description": "180-day implied volatility for puts"
+    },
+    {
+      "name": "iv180mean",
+      "type": "float",
+      "description": "180-day mean implied volatility"
+    },
+    {
+      "name": "iv360call",
+      "type": "float",
+      "description": "360-day implied volatility for calls"
+    },
+    {
+      "name": "iv360put",
+      "type": "float",
+      "description": "360-day implied volatility for puts"
+    },
+    {
+      "name": "iv360mean",
+      "type": "float",
+      "description": "360-day mean implied volatility"
+    },
+    {
+      "name": "callvol",
+      "type": "integer",
+      "description": "Call option volume"
+    },
+    {
+      "name": "putvol",
+      "type": "integer",
+      "description": "Put option volume"
+    },
+    {
+      "name": "totalvol",
+      "type": "integer",
+      "description": "Total option volume"
+    },
+    {
+      "name": "calloi",
+      "type": "integer",
+      "description": "Call option open interest"
+    },
+    {
+      "name": "putoi",
+      "type": "integer",
+      "description": "Put option open interest"
+    },
+    {
+      "name": "totaloi",
+      "type": "integer",
+      "description": "Total open interest"
+    }
+  ],
+  "Forward_Price": [
+    {
+      "name": "Security ID",
+      "type": "integer",
+      "description": "ID of underlying security"
+    },
+    { "name": "Date", "type": "date", "description": "Date of price record" },
+    {
+      "name": "Expiration",
+      "type": "date",
+      "description": "Option expiration date"
+    },
+    {
+      "name": "AMSettlement",
+      "type": "integer",
+      "description": "AM or PM settlement flag"
+    },
+    {
+      "name": "ForwardPrice",
+      "type": "decimal(14,6)",
+      "description": "Calculated forward price"
+    }
+  ]
+}
