@@ -166,6 +166,7 @@ if __name__ == "__main__":
         # Create indexes
         df = df.set_index(['Security ID', 'Date'])
         df2 = df2.set_index(['Security ID', 'Date'])
+        #df=df[df.index.get_level_values('Security ID')==108105]
 
         # Join the DataFrames
         joined_df = df[['Close Price', 'Adjustment Factor2']].join(
@@ -207,15 +208,19 @@ if __name__ == "__main__":
                     atm_vol=group_iv[np.abs(group_ranks)==min_rank][0]
                     atm_strike=log_strike[np.abs(group_ranks)==min_rank][0]
                     log_strike=log_strike-atm_strike
+                    #print(f'atm_vol: {atm_vol}')
+                    #print(f'atm_strike: {atm_strike}')
+                    #print(f'log_strike: {log_strike}')
+                    #print(f'group_iv: {group_iv}')
                 if(~np.isnan(atm_vol)):
                     if(len(group_iv)>1):
 
                         slopes[mask] = linear_regression(log_strike, group_iv-atm_vol)
                         slopes[mask]=slopes[mask]*np.sqrt(group_texp)/10
-
+                        atm_vol=atm_vol-slopes[mask][0]*10*atm_strike/np.sqrt(group_texp[0])
                         atm_iv[mask]=atm_vol
             
-            return slopes,atm_iv
+            return atm_iv,slopes
 
         @jit(nopython=True)
         def rank_strikes_numba(percent_atm, security_id, date, expiration):
@@ -235,7 +240,7 @@ if __name__ == "__main__":
                 below = ~above
                 
                 group_ranks[above] = np.argsort(np.abs(group_percent_atm[above] - 1.0)) #+ 1
-                group_ranks[below] = -(np.argsort(np.abs(group_percent_atm[below] - 1.0))[::-1] + 1)
+                group_ranks[below] = -(np.argsort(np.abs(group_percent_atm[below] - 1.0))[::1] + 1)
                 
                 ranks[mask] = group_ranks
             
@@ -259,9 +264,9 @@ if __name__ == "__main__":
                 date_int.to_numpy(),
                 expiration_int.to_numpy()
             )
-            print(f'date_int: {date_int}')
-            print(f'expiration_int: {expiration_int}')
-            print(f'expiration_int-date_int: {(expiration_int.to_numpy()-date_int.to_numpy())/365.25}')
+            #print(f'date_int: {date_int}')
+            #print(f'expiration_int: {expiration_int}')
+            #print(f'expiration_int-date_int: {(expiration_int.to_numpy()-date_int.to_numpy())/365.25}')
             atm_iv,slopes = surf_params_numba(
                 df['Percent_ATM'].astype(float).to_numpy(),
                 df['Security ID'].astype(int).to_numpy(),
